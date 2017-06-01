@@ -144,6 +144,12 @@ extern "C" {
 # endif
 
 # define BIO_CTRL_DGRAM_SET_PEEK_MODE      71
+# ifndef OPENSSL_NO_KTLS
+#  define BIO_CTRL_SET_KTLS                 72
+#  define BIO_CTRL_GET_KTLS                 73
+#  define BIO_CTRL_SET_KTLS_CTRL_MSG        74
+#  define BIO_CTRL_CLEAR_KTLS_CTRL_MSG      75
+# endif
 
 /* modifiers */
 # define BIO_FP_READ             0x02
@@ -174,6 +180,14 @@ extern "C" {
 # define BIO_FLAGS_MEM_RDONLY    0x200
 # define BIO_FLAGS_NONCLEAR_RST  0x400
 
+/*
+ * This is used with socket BIOs:
+ * BIO_FLAGS_KTLS means we are using ktls with this BIO.
+ * BIO_FLAGS_KTLS_CTRL_MSG means we are about to send a ctrl message next.
+ */
+# define BIO_FLAGS_KTLS          0x800
+# define BIO_FLAGS_KTLS_CTRL_MSG 0x1000
+
 typedef union bio_addr_st BIO_ADDR;
 typedef struct bio_addrinfo_st BIO_ADDRINFO;
 
@@ -189,6 +203,20 @@ void BIO_clear_flags(BIO *b, int flags);
                 BIO_set_flags(b, (BIO_FLAGS_READ|BIO_FLAGS_SHOULD_RETRY))
 # define BIO_set_retry_write(b) \
                 BIO_set_flags(b, (BIO_FLAGS_WRITE|BIO_FLAGS_SHOULD_RETRY))
+
+/* KTLS related controls and flags */
+# ifndef OPENSSL_NO_KTLS
+#  define BIO_set_ktls_flag(b) \
+                BIO_set_flags(b, BIO_FLAGS_KTLS)
+#  define BIO_should_ktls_flag(b) \
+    BIO_test_flags(b, BIO_FLAGS_KTLS)
+#  define BIO_set_ktls_ctrl_msg_flag(b) \
+    BIO_set_flags(b, BIO_FLAGS_KTLS_CTRL_MSG)
+#  define BIO_should_ktls_ctrl_msg_flag(b) \
+    BIO_test_flags(b, (BIO_FLAGS_KTLS_CTRL_MSG))
+#  define BIO_clear_ktls_ctrl_msg_flag(b) \
+    BIO_clear_flags(b, (BIO_FLAGS_KTLS_CTRL_MSG))
+# endif
 
 /* These are normally used internally in BIOs */
 # define BIO_clear_retry_flags(b) \
@@ -380,6 +408,17 @@ struct bio_dgram_sctp_prinfo {
 #  define BIO_get_conn_address(b)       ((const BIO_ADDR *)BIO_ptr_ctrl(b,BIO_C_GET_CONNECT,2))
 #  define BIO_get_conn_ip_family(b)     BIO_ctrl(b,BIO_C_GET_CONNECT,3,NULL)
 #  define BIO_set_conn_mode(b,n)        BIO_ctrl(b,BIO_C_SET_CONNECT_MODE,(n),NULL)
+
+#  ifndef OPENSSL_NO_KTLS
+#   define BIO_set_ktls(b, keyblob, is_tx)   \
+     BIO_ctrl(b, BIO_CTRL_SET_KTLS, is_tx, keyblob)
+#   define BIO_get_ktls(b)         \
+     BIO_ctrl(b, BIO_CTRL_GET_KTLS, 0, NULL)
+#   define BIO_set_ktls_ctrl_msg(b, record_type)   \
+     BIO_ctrl(b, BIO_CTRL_SET_KTLS_CTRL_MSG, record_type, NULL)
+#   define BIO_clear_ktls_ctrl_msg(b) \
+     BIO_ctrl(b, BIO_CTRL_CLEAR_KTLS_CTRL_MSG, 0, NULL)
+#  endif
 
 /* BIO_s_accept() */
 #  define BIO_set_accept_name(b,name)   BIO_ctrl(b,BIO_C_SET_ACCEPT,0, \
