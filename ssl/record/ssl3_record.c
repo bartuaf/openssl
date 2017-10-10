@@ -281,7 +281,7 @@ int ssl3_get_record(SSL *s)
         } else {
             i = rr[num_recs].length;
         }
-        if (i > 0) {
+        if (!BIO_get_offload_rx_flag(s->rbio) && i > 0) {
             /* now s->packet_length == SSL3_RT_HEADER_LENGTH */
 
             n = ssl3_read_n(s, i, i, 1, 0);
@@ -343,6 +343,10 @@ int ssl3_get_record(SSL *s)
              && (EVP_CIPHER_flags(EVP_CIPHER_CTX_cipher(s->enc_read_ctx))
                  & EVP_CIPH_FLAG_PIPELINE)
              && ssl3_record_app_data_waiting(s));
+
+
+    if (BIO_get_offload_rx_flag(s->rbio))
+	    goto skip_decryption;
 
     /*
      * If in encrypt-then-mac mode calculate mac from encrypted record. All
@@ -513,7 +517,7 @@ int ssl3_get_record(SSL *s)
             RECORD_LAYER_reset_empty_record_count(&s->rlayer);
         }
     }
-
+skip_decryption:
     RECORD_LAYER_set_numrpipes(&s->rlayer, num_recs);
     return 1;
 

@@ -263,7 +263,7 @@ struct tcp_md5sig
 
 #define SOL_TLS                 282
 #define TLS_TX                  1
-//#define TLS_RX                  2
+#define TLS_RX                  2
 
 /* Supported versions */
 #define TLS_VERSION_MINOR(ver)	((ver) & 0xFF)
@@ -285,6 +285,7 @@ struct tcp_md5sig
 #define TLS_CIPHER_AES_GCM_128_REC_SEQ_SIZE	((size_t)8)
 
 #define TLS_SET_RECORD_TYPE	1
+#define TLS_GET_RECORD_TYPE	2
 
 struct tls_crypto_info {
 	unsigned short version;

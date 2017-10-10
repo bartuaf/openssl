@@ -147,6 +147,8 @@ extern "C" {
 # define BIO_CTRL_SET_OFFLOAD_TX_CTRL_MSG      73
 # define BIO_CTRL_CLEAR_OFFLOAD_TX_CTRL_MSG    74
 
+# define BIO_CTRL_SET_OFFLOAD_RX               75
+
 /* modifiers */
 # define BIO_FP_READ             0x02
 # define BIO_FP_WRITE            0x04
@@ -183,6 +185,7 @@ extern "C" {
  */
 # define BIO_FLAGS_OFFLOAD_TX          0x2000
 # define BIO_FLAGS_OFFLOAD_TX_CTRL_MSG 0x4000
+# define BIO_FLAGS_OFFLOAD_RX          0x8000
 typedef union bio_addr_st BIO_ADDR;
 typedef struct bio_addrinfo_st BIO_ADDRINFO;
 
@@ -210,6 +213,12 @@ void BIO_clear_flags(BIO *b, int flags);
     BIO_test_flags(b, (BIO_FLAGS_OFFLOAD_TX_CTRL_MSG))
 # define BIO_clear_offload_tx_ctrl_msg_flag(b) \
     BIO_clear_flags(b, (BIO_FLAGS_OFFLOAD_TX_CTRL_MSG))
+
+# define BIO_set_offload_rx_flag(b) \
+         BIO_set_flags(b, BIO_FLAGS_OFFLOAD_RX)
+
+# define BIO_get_offload_rx_flag(b) \
+	 BIO_test_flags(b, BIO_FLAGS_OFFLOAD_RX)
 
 /* These are normally used internally in BIOs */
 # define BIO_clear_retry_flags(b) \
@@ -392,6 +401,8 @@ struct bio_dgram_sctp_prinfo {
 #  define BIO_set_conn_mode(b,n)        BIO_ctrl(b,BIO_C_SET_CONNECT_MODE,(n),NULL)
 #  define BIO_set_offload_tx(b, keyblob) \
     BIO_ctrl(b, BIO_CTRL_SET_OFFLOAD_TX, 0, keyblob)
+#  define BIO_set_offload_rx(b, keyblob) \
+    BIO_ctrl(b, BIO_CTRL_SET_OFFLOAD_RX, 0, keyblob)
 #  define BIO_get_offload_tx(b)         \
     BIO_ctrl(b, BIO_CTRL_GET_OFFLOAD_TX, 0, NULL)
 #  define BIO_set_offload_tx_ctrl_msg(b, record_type)   \

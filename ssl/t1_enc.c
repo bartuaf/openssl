@@ -331,12 +331,6 @@ int tls1_change_cipher_state(SSL *s, int which)
 	goto skip_offload;
     }
 
-    if (!(which & SSL3_CC_WRITE)) {
-#ifdef SSL_DEBUG
-        printf("\nSkipping offload for non-write context\n");
-#endif // SSL_DEBUG
-        goto skip_offload;
-    }
     memset(&crypto_info, 0, sizeof(crypto_info));
 
     /* check that cipher is AES_GCM_128 */
@@ -374,8 +368,19 @@ int tls1_change_cipher_state(SSL *s, int which)
     memcpy(crypto_info.iv, geniv + 4, TLS_CIPHER_AES_GCM_128_IV_SIZE);
     memcpy(crypto_info.salt, geniv, TLS_CIPHER_AES_GCM_128_SALT_SIZE);
     memcpy(crypto_info.key, key, EVP_CIPHER_key_length(c));
-    memcpy(crypto_info.rec_seq, &s->rlayer.write_sequence,
-            TLS_CIPHER_AES_GCM_128_REC_SEQ_SIZE);
+
+
+
+    if (!(which & SSL3_CC_WRITE)) {
+#ifdef SSL_DEBUG
+        printf("\ntrying to offload RX context\n");
+#endif // SSL_DEBUG
+
+        memcpy(crypto_info.rec_seq, &s->rlayer.read_sequence,
+               TLS_CIPHER_AES_GCM_128_REC_SEQ_SIZE);
+        BIO_set_offload_rx(s->rbio, &crypto_info);
+        goto skip_offload;
+    }
 
     wbio = s->wbio;
     if (!wbio) {
@@ -384,8 +389,9 @@ int tls1_change_cipher_state(SSL *s, int which)
 
     (void)BIO_flush(wbio);
 
+    memcpy(crypto_info.rec_seq, &s->rlayer.write_sequence,
+           TLS_CIPHER_AES_GCM_128_REC_SEQ_SIZE);
     BIO_set_offload_tx(wbio, &crypto_info);
-
 skip_offload:
 #endif // OPENSSL_LINUX_TLS
 

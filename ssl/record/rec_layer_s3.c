@@ -182,6 +182,63 @@ const char *SSL_rstate_string(const SSL *s)
     }
 }
 
+
+static int read_record(int fd, void *data, size_t length)
+{
+    struct msghdr msg = {0};
+    int cmsg_len = sizeof(unsigned char);
+    struct cmsghdr *cmsg;
+    char buf[CMSG_SPACE(cmsg_len)];
+    struct iovec msg_iov;   /* Vector of data to send/receive into */
+    int ret;
+    char *p = data;
+    int prepend_length = SSL3_RT_HEADER_LENGTH;
+
+    msg.msg_control = buf;
+    msg.msg_controllen = sizeof(buf);
+    cmsg = CMSG_FIRSTHDR(&msg);
+    cmsg->cmsg_level = SOL_TLS;
+    cmsg->cmsg_type = TLS_GET_RECORD_TYPE;
+    cmsg->cmsg_len = CMSG_LEN(cmsg_len);
+    msg.msg_controllen = cmsg->cmsg_len;
+
+    msg_iov.iov_base = (void *)data + prepend_length;
+    msg_iov.iov_len = length - prepend_length - 16;
+    msg.msg_iov = &msg_iov;
+    msg.msg_iovlen = 1;
+
+    ret = recvmsg(fd, &msg, MSG_EOR);
+    if (ret <= 0)
+	    return ret;
+
+    *(p++) = *((unsigned char *)CMSG_DATA(cmsg));
+    *(p++) = 0x3;
+    *(p++) = 0x3;
+    ret += prepend_length;
+    s2n(ret - SSL3_RT_HEADER_LENGTH, p);
+    return ret;
+}
+
+struct bio_st {
+    const BIO_METHOD *method;
+    /* bio, mode, argp, argi, argl, ret */
+    long (*callback) (struct bio_st *, int, const char *, int, long, long);
+    char *cb_arg;               /* first argument for the callback */
+    int init;
+    int shutdown;
+    int flags;                  /* extra storage */
+    int retry_reason;
+    int num;
+    void *ptr;
+    struct bio_st *next_bio;    /* used by filter BIOs */
+    struct bio_st *prev_bio;    /* used by filter BIOs */
+    int references;
+    uint64_t num_read;
+    uint64_t num_write;
+    CRYPTO_EX_DATA ex_data;
+    CRYPTO_RWLOCK *lock;
+};
+
 /*
  * Return values are as per SSL_read()
  */
@@ -283,7 +340,8 @@ int ssl3_read_n(SSL *s, int n, int max, int extend, int clearold)
     }
 
     /* We always act like read_ahead is set for DTLS */
-    if (!s->rlayer.read_ahead && !SSL_IS_DTLS(s))
+    if (!BIO_get_offload_rx_flag(s->rbio) &&
+        !s->rlayer.read_ahead && !SSL_IS_DTLS(s))
         /* ignore max parameter */
         max = n;
     else {
@@ -292,6 +350,23 @@ int ssl3_read_n(SSL *s, int n, int max, int extend, int clearold)
         if (max > (int)(rb->len - rb->offset))
             max = rb->len - rb->offset;
     }
+
+    if (BIO_get_offload_rx_flag(s->rbio)) {
+	if (left || max < 5 + 16) {
+	    printf("error rbuf not empty, left=%d, length=\n", left, max);
+	    SSLerr(SSL_F_SSL3_READ_N, SSL_R_BAD_LENGTH);
+	    return -1;
+	}
+
+	n = read_record(s->rbio->num, pkt + len, max);
+	printf("read_record ret=%d, len=%d\n", n, max);
+	if (n <= 0) {
+		return n;
+	}
+
+	left = n;
+    }
+
 
     while (left < n) {
         /*

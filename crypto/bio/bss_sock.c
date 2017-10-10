@@ -182,6 +182,7 @@ static long sock_ctrl(BIO *b, int cmd, long num, void *ptr)
     int *ip;
 # ifdef OPENSSL_LINUX_TLS
     struct tls12_crypto_info_aes_gcm_128 *crypto_info;
+    int direction;
 # endif
 
     switch (cmd) {
@@ -210,16 +211,22 @@ static long sock_ctrl(BIO *b, int cmd, long num, void *ptr)
     case BIO_CTRL_FLUSH:
         ret = 1;
         break;
-# if defined(OPENSSL_LINUX_TLS)
+    case BIO_CTRL_SET_OFFLOAD_RX:
+         /* Fall through */
+#if defined(OPENSSL_LINUX_TLS)
     case BIO_CTRL_SET_OFFLOAD_TX:
+        direction = cmd == BIO_CTRL_SET_OFFLOAD_TX ? TLS_TX : TLS_RX;
         crypto_info = (struct tls12_crypto_info_aes_gcm_128 *)ptr;
-        ret = setsockopt(b->num, SOL_TLS, TLS_TX,
+        ret = setsockopt(b->num, SOL_TLS, direction,
                          crypto_info, sizeof(*crypto_info));
 #ifdef SSL_DEBUG
         printf("\nAttempt to offload...");
 #endif
         if (!ret) {
-            BIO_set_offload_tx_flag(b);
+            if (cmd == BIO_CTRL_SET_OFFLOAD_TX)
+        	    BIO_set_offload_tx_flag(b);
+            else
+        	    BIO_set_offload_rx_flag(b);
 #ifdef SSL_DEBUG
             printf("Success %p %p\n", b, &(b->flags));
 #endif
