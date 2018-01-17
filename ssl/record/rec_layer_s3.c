@@ -764,6 +764,10 @@ int do_ssl3_write(SSL *s, int type, const unsigned char *buf,
             eivlen = 0;
 
             SSL3_RECORD_set_type(&wr[j], type);
+            /* Remove const quantifier to put buf in wb,
+             * This is ok because we are not going to write to buf
+             */
+            //SSL3_BUFFER_set_buf(wb, (unsigned char *)buf);
             SSL3_BUFFER_set_buf(wb, buf);
             SSL3_BUFFER_set_offset(wb, 0);
         } else {
