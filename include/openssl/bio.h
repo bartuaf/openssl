@@ -750,6 +750,8 @@ int BIO_new_bio_pair(BIO **bio1, size_t writebuf1,
 
 void BIO_copy_next_retry(BIO *b);
 
+int BIO_read_record(BIO *b, void *data, size_t length, unsigned char *type);
+
 /*
  * long BIO_ghbn_ctrl(int cmd,int iarg,char *parg);
  */

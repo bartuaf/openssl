@@ -176,6 +176,33 @@ static int sock_write(BIO *b, const char *in, int inl)
     return (ret);
 }
 
+int BIO_read_record(BIO *b, void *data, size_t length, unsigned char *type)
+{
+    struct msghdr msg = {0};
+    int cmsg_len = sizeof(unsigned char);
+    struct cmsghdr *cmsg;
+    char buf[CMSG_SPACE(cmsg_len)];
+    struct iovec msg_iov;   /* Vector of data to send/receive into */
+    int ret;
+
+    msg.msg_control = buf;
+    msg.msg_controllen = sizeof(buf);
+    cmsg = CMSG_FIRSTHDR(&msg);
+    cmsg->cmsg_level = SOL_TLS;
+    cmsg->cmsg_type = TLS_GET_RECORD_TYPE;
+    cmsg->cmsg_len = CMSG_LEN(cmsg_len);
+    msg.msg_controllen = cmsg->cmsg_len;
+
+    msg_iov.iov_base = (void *)data;
+    msg_iov.iov_len = length;
+    msg.msg_iov = &msg_iov;
+    msg.msg_iovlen = 1;
+
+    ret = recvmsg(b->num, &msg, MSG_EOR);
+    memcpy(type, CMSG_DATA(cmsg), sizeof(*type));
+    return ret;
+}
+
 static long sock_ctrl(BIO *b, int cmd, long num, void *ptr)
 {
     long ret = 1;
