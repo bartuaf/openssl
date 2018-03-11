@@ -180,7 +180,7 @@ static ossl_inline int ktls_read_record(int fd, void *data, size_t length)
 /*
  * Receive a TLS record using the crypto_info provided in ktls_start.
  * The kernel strips the TLS record header, IV and authentication tag,
- * returnning only the plaintext data or an error on failure.
+ * returning only the plaintext data or an error on failure.
  * We add the TLS record header here to satisfy routines in rec_layer_s3.c
  */
 static ossl_inline int ktls_read_record(int fd, void *data, size_t length)
