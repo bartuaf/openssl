@@ -6,6 +6,7 @@ BIO_ctrl, BIO_callback_ctrl, BIO_ptr_ctrl, BIO_int_ctrl, BIO_reset,
 BIO_seek, BIO_tell, BIO_flush, BIO_eof, BIO_set_close, BIO_get_close,
 BIO_pending, BIO_wpending, BIO_ctrl_pending, BIO_ctrl_wpending,
 BIO_get_info_callback, BIO_set_info_callback, BIO_info_cb, BIO_get_ktls_send
+BIO_get_ktls_recv
 - BIO control operations
 
 =head1 SYNOPSIS
@@ -35,6 +36,7 @@ BIO_get_info_callback, BIO_set_info_callback, BIO_info_cb, BIO_get_ktls_send
  int BIO_set_info_callback(BIO *b, BIO_info_cb *cb);
 
  int BIO_get_ktls_send(BIO *b);
+ int BIO_get_ktls_recv(BIO *b);
 
 =head1 DESCRIPTION
 
@@ -76,6 +78,8 @@ macros which call BIO_ctrl().
 
 BIO_get_ktls_send() return 1 if the BIO is using the Kernel TLS data-path for
 sending. Otherwise, it returns zero.
+BIO_get_ktls_recv() return 1 if the BIO is using the Kernel TLS data-path for
+receiving. Otherwise, it returns zero.
 
 =head1 RETURN VALUES
 
@@ -99,6 +103,8 @@ return the amount of pending data.
 
 BIO_get_ktls_send() return 1 if the BIO is using the Kernel TLS data-path for
 sending. Otherwise, it returns zero.
+BIO_get_ktls_recv() return 1 if the BIO is using the Kernel TLS data-path for
+receiving. Otherwise, it returns zero.
 
 =head1 NOTES
 
@@ -134,7 +140,8 @@ the case of BIO_seek() on a file BIO for a successful operation.
 
 =head1 HISTORY
 
-The BIO_get_ktls_send() function was added in OpenSSL 3.0.0.
+The BIO_get_ktls_send() and BIO_get_ktls_recv() function was added in
+OpenSSL 3.0.0.
 
 =head1 COPYRIGHT
 
